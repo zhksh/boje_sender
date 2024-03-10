@@ -1,134 +1,98 @@
-#include <Arduino.h>
+/*************************************************************
+  Blynk is a platform with iOS and Android apps to control
+  ESP32, Arduino, Raspberry Pi and the likes over the Internet.
+  You can easily build mobile and web interfaces for any
+  projects by simply dragging and dropping widgets.
 
-#include <RCSwitch.h>
-#include <OneWire.h>
-#include <DallasTemperature.h>
-#include <util.h>
-#include <debug.h>
-#include <vals.h>
+    Downloads, docs, tutorials: https://www.blynk.io
+    Sketch generator:           https://examples.blynk.cc
+    Blynk community:            https://community.blynk.cc
+    Follow us:                  https://www.fb.com/blynkapp
+                                https://twitter.com/blynk_app
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+  Blynk library is licensed under MIT license
+  This example code is in public domain.
 
-// PINS
-#define TRANSMITTER_PIN 11
+ *************************************************************
+  Attention! Please check out TinyGSM guide:
+    https://tiny.cc/tinygsm-readme
 
-#define TEMPSENSOR0_PIN  4
-#define TEMPSENSOR1_PIN  5
+  Change GPRS apm, user, pass, and Blynk auth token to run :)
+  Feel free to apply it to any other example. It's simple!
 
+ *************************************************************/
 
-#define TESENSOR A0
+/* Comment this out to disable prints and save space */
+#define BLYNK_PRINT Serial
 
+/* Fill in information from Blynk Device Info here */
+//#define BLYNK_TEMPLATE_ID           "TMPxxxxxx"
+//#define BLYNK_TEMPLATE_NAME         "Device"
+// #define BLYNK_AUTH_TOKEN            "YourAuthToken"
 
-RCSwitch sender = RCSwitch();
-
-OneWire temp0Driver(TEMPSENSOR0_PIN);
-DallasTemperature temp0Sensor(&temp0Driver);
-
-OneWire temp1Driver(TEMPSENSOR1_PIN);
-DallasTemperature temp1Sensor(&temp1Driver);
-
-
-
+#define BLYNK_TEMPLATE_ID "TMPL4YFTSncIU"
+#define BLYNK_TEMPLATE_NAME "Quickstart Template"
+#define BLYNK_AUTH_TOKEN "mDSkU4nyo0Fux54g6U-x5UcYopysiFdz"
 
 
-void transmit(long data) {
+// Select your modem:
+// #define TINY_GSM_MODEM_SIM800
+#define TINY_GSM_MODEM_SIM900
+//#define TINY_GSM_MODEM_M590
+//#define TINY_GSM_MODEM_A6
+//#define TINY_GSM_MODEM_A7
+//#define TINY_GSM_MODEM_BG96
+//#define TINY_GSM_MODEM_XBEE
 
-  long msg = addprefix(data, SENSOR_RC_PREFIX, SENSOR_RC_PREFIX_POS);
-  Serial.print("raw:");
-  Serial.print(dec2binWzerofill(msg, MSG_LENGTH));
-  Serial.print(", encoded:");
-  Serial.println(msg);
-  sender.send(msg , MSG_LENGTH);
+// Default heartbeat interval for GSM is 60
+// If you want override this value, uncomment and set this option:
+//#define BLYNK_HEARTBEAT 30
+
+#include <TinyGsmClient.h>
+#include <BlynkSimpleTinyGSM.h>
+
+// Your GPRS credentials
+// Leave empty, if missing user or pass
+char apn[]  = "YourAPN";
+char user[] = "";
+char pass[] = "";
+
+// Hardware Serial on Mega, Leonardo, Micro
+#define SerialAT Serial1
+
+// or Software Serial on Uno, Nano
+//#include <SoftwareSerial.h>
+//SoftwareSerial SerialAT(2, 3); // RX, TX
+
+TinyGsm modem(SerialAT);
+
+void setup()
+{
+  // Debug console
+  Serial.begin(9600);
+
+  delay(10);
+
+  // Set GSM module baud rate
+  SerialAT.begin(9600);
+  delay(3000);
+
+  // Restart takes quite some time
+  // To skip it, call init() instead of restart()
+  Serial.println("Initializing modem...");
+  modem.restart();
+
+  String modemInfo = modem.getModemInfo();
+  Serial.print("Modem Info: ");
+  Serial.println(modemInfo);
+  if (modem.isGprsConnected())  Serial.println("GPRS connected"); 
+  // Unlock your SIM card with a PIN
+  //modem.simUnlock("1234");
+
+//   Blynk.begin(BLYNK_AUTH_TOKEN, modem, apn, user, pass);
 }
 
-
-void setup() {
-  Serial.begin(BAUD);
-  // Serial.println("Sender setup");
-  temp0Sensor.begin();
-  temp1Sensor.begin();
-
-  sender.enableTransmit(TRANSMITTER_PIN);
-  sender.setRepeatTransmit(SENSOR_REPEAT_TRANSMISSION);
+void loop()
+{
+//   Blynk.run();
 }
-
-// void printToSerial(float tb, float temp0, float temp1, float aux){
-//   Serial.print("DATA|");
-//   Serial.print("tb");
-//   Serial.print(":");
-//   Serial.print(tb);
-//   Serial.print(";");
-
-//   Serial.print("tmp0");
-//   Serial.print(":");
-//   Serial.print(temp0);
-//   Serial.print(";");
-
-//   Serial.print("tmp1");
-//   Serial.print(":");
-//   Serial.print(temp1);
-//   Serial.print(";");
-
-//   Serial.print("aux");
-//   Serial.print(":");
-//   Serial.print(aux);
-
-//   Serial.println("");
-// }
-
-
-float requestTemp(DallasTemperature sensor){
-    float val;
-    sensor.requestTemperatures(); // Send the command to get temperatures
-    // Serial.println("DONE");
-    // After we got the temperatures, we can print them here.
-    // We use the function ByIndex, and as an example get the temperature from the first sensor only.
-    val = sensor.getTempCByIndex(0);
-    // Check if reading was successful
-    // if(val != DEVICE_DISCONNECTED_C) 
-    // {
-    //   Serial.print("Temperature for the device 1 (index 0) is: ");
-    //   Serial.println(val);
-    // } 
-    // else
-    // {
-    //   Serial.println("Error: Could not read temperature data");
-    // }
-    return val;
-}
-
-void loop() {
-
-  // float sensorValue = digitalRead(TESENSOR);
-  float tbval = analogRead(TESENSOR);
-  float val0 = requestTemp(temp0Sensor);
-  float val1 = requestTemp(temp1Sensor);
-  long val0_cut = 23.3 * 10;
-  long val1_cut = 23.8 * 10;
-  // long val0_cut = val0 *-10;
-  // long val1_cut = val1 *-10;
-
-  // Serial.print("tbval:");
-  // Serial.println(dec2binWzerofill(tbval, MSG_LENGTH));
-  Serial.print("temp0:");
-  Serial.println(val0_cut);
-  // Serial.println(val0);
-  // Serial.println(dec2binWzerofill(val0_cut, MSG_LENGTH));
-  Serial.print("temp1:");
-  Serial.println(val1_cut);
-  // Serial.println(val1);
-  // Serial.println(dec2binWzerofill(val1_cut, MSG_LENGTH));
-
-  long raw = (long) tbval << TURB_POS;
-  raw |=  val1_cut << TEMP1_POS; 
-  raw |=  val0_cut << TEMP0_POS; 
-
-  sender.setProtocol(1);
-
-  transmit(raw);  
-  delay(SENSOR_SEND_FRQ);
-  
-}
-
