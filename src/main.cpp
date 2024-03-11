@@ -74,7 +74,8 @@ SoftwareSerial SerialAT(2, 3);  // RX, TX
 // NOTE:  DO NOT AUTOBAUD in production code.  Once you've established
 // communication, set a fixed baud rate using modem.setBaud(#).
 #define GSM_AUTOBAUD_MIN 9600
-#define GSM_AUTOBAUD_MAX 115200
+#define GSM_AUTOBAUD_MAX 9600
+// #define GSM_AUTOBAUD_MAX 115200
 
 // Add a reception delay, if needed.
 // This may be needed for a fast processor at a slow baud rate.
@@ -98,9 +99,10 @@ const char wifiSSID[] = "YourSSID";
 const char wifiPass[] = "YourWiFiPass";
 
 // Server details
-const char server[]   = "vsh.pp.ua";
-const char resource[] = "/TinyGSM/logo.txt";
-const int  port       = 80;
+const char server[]   = "demo.langbox.ai";
+const char resource[] = "/api/v1/test";
+// const char resource[] = "/TinyGSM/logo.txt";
+const int  port       = 5101;
 
 #include <TinyGsmClient.h>
 #include <ArduinoHttpClient.h>
@@ -143,7 +145,7 @@ void setup() {
 
   // Set GSM module baud rate
   TinyGsmAutoBaud(SerialAT, GSM_AUTOBAUD_MIN, GSM_AUTOBAUD_MAX);
-  // SerialAT.begin(9600);
+  SerialAT.begin(9600);
   delay(6000);
 
   // Restart takes quite some time
@@ -160,6 +162,45 @@ void setup() {
   // Unlock your SIM card with a PIN if needed
   if (GSM_PIN && modem.getSimStatus() != 3) { modem.simUnlock(GSM_PIN); }
 #endif
+}
+
+void post(const String& content, int c)
+{
+  SerialMon.println("making POST request");
+  String contentType = "application/json";
+  String data = content + ": " +  String(c);
+  String postData = "{\"doc\" : \"" + data + "\"}";
+
+  http.post(resource, contentType, postData);
+
+  // read the status code and body of the response
+  int status = http.responseStatusCode();
+  SerialMon.print(F("Response status code: "));
+  SerialMon.println(status);
+  
+
+  SerialMon.println(F("Response Headers:"));
+  while (http.headerAvailable()) {
+    String headerName  = http.readHeaderName();
+    String headerValue = http.readHeaderValue();
+    SerialMon.println("    " + headerName + " : " + headerValue);
+  }
+
+  int length = http.contentLength();
+  if (length >= 0) {
+    SerialMon.print(F("Content length is: "));
+    SerialMon.println(length);
+  }
+  if (http.isResponseChunked()) {
+    SerialMon.println(F("The response is chunked"));
+  }
+
+  String body = http.responseBody();
+  SerialMon.println(F("Response:"));
+  SerialMon.println(body);
+
+  SerialMon.print(F("Body length is: "));
+  SerialMon.println(body.length());
 }
 
 void loop() {
@@ -203,44 +244,55 @@ void loop() {
   if (modem.isGprsConnected()) { SerialMon.println("GPRS connected"); }
 #endif
 
-  SerialMon.print(F("Performing HTTP GET request... "));
-  int err = http.get(resource);
-  if (err != 0) {
-    SerialMon.println(F("failed to connect"));
-    delay(10000);
-    return;
+  int c = 0;
+  while (c < 10){
+    post("werfgoughergfü", c++);
   }
+  // POST
+ 
 
-  int status = http.responseStatusCode();
-  SerialMon.print(F("Response status code: "));
-  SerialMon.println(status);
-  if (!status) {
-    delay(10000);
-    return;
-  }
+  
 
-  SerialMon.println(F("Response Headers:"));
-  while (http.headerAvailable()) {
-    String headerName  = http.readHeaderName();
-    String headerValue = http.readHeaderValue();
-    SerialMon.println("    " + headerName + " : " + headerValue);
-  }
 
-  int length = http.contentLength();
-  if (length >= 0) {
-    SerialMon.print(F("Content length is: "));
-    SerialMon.println(length);
-  }
-  if (http.isResponseChunked()) {
-    SerialMon.println(F("The response is chunked"));
-  }
+  ///// GET
+  // SerialMon.print(F("Performing HTTP GET request... "));
+  // int err = http.get(resource);
+  // if (err != 0) {
+  //   SerialMon.println(F("failed to connect"));
+  //   delay(10000);
+  //   return;
+  // }
 
-  String body = http.responseBody();
-  SerialMon.println(F("Response:"));
-  SerialMon.println(body);
+  // int status = http.responseStatusCode();
+  // SerialMon.print(F("Response status code: "));
+  // SerialMon.println(status);
+  // if (!status) {
+  //   delay(10000);
+  //   return;
+  // }
 
-  SerialMon.print(F("Body length is: "));
-  SerialMon.println(body.length());
+  // SerialMon.println(F("Response Headers:"));
+  // while (http.headerAvailable()) {
+  //   String headerName  = http.readHeaderName();
+  //   String headerValue = http.readHeaderValue();
+  //   SerialMon.println("    " + headerName + " : " + headerValue);
+  // }
+
+  // int length = http.contentLength();
+  // if (length >= 0) {
+  //   SerialMon.print(F("Content length is: "));
+  //   SerialMon.println(length);
+  // }
+  // if (http.isResponseChunked()) {
+  //   SerialMon.println(F("The response is chunked"));
+  // }
+
+  // String body = http.responseBody();
+  // SerialMon.println(F("Response:"));
+  // SerialMon.println(body);
+
+  // SerialMon.print(F("Body length is: "));
+  // SerialMon.println(body.length());
 
   // Shutdown
 
