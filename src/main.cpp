@@ -39,6 +39,7 @@
 // Use Hardware Serial on Mega, Leonardo, Micro
 #define SerialAT Serial1
 #define SerialRX Serial3
+#define SerialGPS Serial2
 
 
 // See all AT commands, if wanted
@@ -98,6 +99,8 @@ const int port        = 80;
 #include <TinyGsmClient.h>
 #include <ArduinoHttpClient.h>
 #include <ArduinoJson.h>
+#include <TinyGPS++.h>
+
 
 #if TINY_GSM_TEST_GPRS && not defined TINY_GSM_MODEM_HAS_GPRS
 #undef TINY_GSM_TEST_GPRS
@@ -122,6 +125,7 @@ TinyGsm        modem(SerialAT);
 
 TinyGsmClient client(modem, 0);
 HttpClient    http(client, server, port);
+TinyGPSPlus gps;
 
 void setup() {
 
@@ -141,6 +145,7 @@ void setup() {
   // TinyGsmAutoBaud(SerialAT, GSM_AUTOBAUD_MIN, GSM_AUTOBAUD_MAX);
   SerialAT.begin(115200);
   SerialRX.begin(9600);
+  SerialGPS.begin(9600);
 
   DBG("Initializing modem...");
   bool modem_running = modem.restart();
@@ -152,62 +157,62 @@ void setup() {
     // TinyGsmAutoBaud(SerialAT, GSM_AUTOBAUD_MIN, GSM_AUTOBAUD_MAX);
   }
 
-  String name = modem.getModemName();
-  DBG("Modem Name:", name);
+//   String name = modem.getModemName();
+//   DBG("Modem Name:", name);
 
-  String modemInfo = modem.getModemInfo();
-  DBG("Modem Info:", modemInfo);
+//   String modemInfo = modem.getModemInfo();
+//   DBG("Modem Info:", modemInfo);
 
-  #if TINY_GSM_TEST_GPRS
-    // Unlock your SIM card with a PIN if needed
-    if (GSM_PIN && modem.getSimStatus() != 3) { modem.simUnlock(GSM_PIN); }
-  #endif
+//   #if TINY_GSM_TEST_GPRS
+//     // Unlock your SIM card with a PIN if needed
+//     if (GSM_PIN && modem.getSimStatus() != 3) { modem.simUnlock(GSM_PIN); }
+//   #endif
 
 
-// #if TINY_GSM_TEST_GPRS && defined TINY_GSM_MODEM_XBEE
-//   // The XBee must run the gprsConnect function BEFORE waiting for network!
-//   modem.gprsConnect(apn, gprsUser, gprsPass);
-// #endif
-  // bool network_connected = 
-  DBG("Waiting for network...");
-  if (!modem.waitForNetwork(600000L, true)) {
-    delay(10000);
-    return;
-  }
+// // #if TINY_GSM_TEST_GPRS && defined TINY_GSM_MODEM_XBEE
+// //   // The XBee must run the gprsConnect function BEFORE waiting for network!
+// //   modem.gprsConnect(apn, gprsUser, gprsPass);
+// // #endif
+//   // bool network_connected = 
+//   DBG("Waiting for network...");
+//   if (!modem.waitForNetwork(600000L, true)) {
+//     delay(10000);
+//     return;
+//   }
 
-  if (modem.isNetworkConnected()) { DBG("Network connected"); }
+//   if (modem.isNetworkConnected()) { DBG("Network connected"); }
 
-  #if TINY_GSM_TEST_GPRS
-    DBG("Connecting to", apn);
-    if (!modem.gprsConnect(apn, gprsUser, gprsPass)) {
-      delay(10000);
-      return;
-    }
+//   #if TINY_GSM_TEST_GPRS
+//     DBG("Connecting to", apn);
+//     if (!modem.gprsConnect(apn, gprsUser, gprsPass)) {
+//       delay(10000);
+//       return;
+//     }
 
-    bool res = modem.isGprsConnected();
-    DBG("GPRS status:", res ? "connected" : "not connected");
+//     bool res = modem.isGprsConnected();
+//     DBG("GPRS status:", res ? "connected" : "not connected");
 
-    String ccid = modem.getSimCCID();
-    DBG("CCID:", ccid);
+//     String ccid = modem.getSimCCID();
+//     DBG("CCID:", ccid);
 
-    String imei = modem.getIMEI();
-    DBG("IMEI:", imei);
+//     String imei = modem.getIMEI();
+//     DBG("IMEI:", imei);
 
-    String imsi = modem.getIMSI();
-    DBG("IMSI:", imsi);
+//     String imsi = modem.getIMSI();
+//     DBG("IMSI:", imsi);
 
-    String cop = modem.getOperator();
-    DBG("Operator:", cop);
+//     String cop = modem.getOperator();
+//     DBG("Operator:", cop);
 
-    IPAddress local = modem.localIP();
-    DBG("Local IP:", local);
+//     IPAddress local = modem.localIP();
+//     DBG("Local IP:", local);
 
-    int csq = modem.getSignalQuality();
-    DBG("Signal quality:", csq);
+//     int csq = modem.getSignalQuality();
+//     DBG("Signal quality:", csq);
 
-    DBG("Enabling GPS/GNSS/GLONASS and waiting 15s for warm-up");
-    modem.enableGPS();
-    delay(15000L);
+    // DBG("Enabling GPS/GNSS/GLONASS and waiting 15s for warm-up");
+    // modem.enableGPS();
+    // delay(15000L);
 
     DBG("Startup took:");
     DBG(millis()-start);
@@ -265,28 +270,28 @@ void loop() {
   // Restart takes quite some time
   // To skip it, call init() instead of restart()
   
-  //  String gps_raw = modem.getGPSraw();
-    DBG("GPS/GNSS Based Location String:");
-      float lat2      = 0;
-      float lon2      = 0;
-      float speed2    = 0;
-      float alt2      = 0;
-      int   vsat2     = 0;
-      int   usat2     = 0;
-      float accuracy2 = 0;
-      int   year2     = 0;
-      int   month2    = 0;
-      int   day2      = 0;
-      int   hour2     = 0;
-      int   min2      = 0;
-      int   sec2      = 0;
-    modem.getGPS(&lat2, &lon2, &speed2, &alt2, &vsat2, &usat2, &accuracy2,&year2, &month2, &day2, &hour2, &min2, &sec2);
-      DBG("Latitude:", String(lat2, 8), "\tLongitude:", String(lon2, 8));
-      DBG("Speed:", speed2, "\tAltitude:", alt2);
-      DBG("Visible Satellites:", vsat2, "\tUsed Satellites:", usat2);
-      DBG("Accuracy:", accuracy2);
-      DBG("Year:", year2, "\tMonth:", month2, "\tDay:", day2);
-      DBG("Hour:", hour2, "\tMinute:", min2, "\tSecond:", sec2);
+      //  String gps_raw = modem.getGPSraw();
+
+      // float lat2      = 0;
+      // float lon2      = 0;
+      // modem.getGPS(&lat2, &lon2);      
+    
+      while (SerialGPS.available() > 0) {
+        gps.encode(SerialGPS.read());
+
+        if (gps.location.isUpdated()) {
+           DBG("GPS/GNSS Based Location String:");
+
+
+          // Breitengrad mit 3 Nachkommastellen
+          SerialMon.print("Breitengrad= ");
+          SerialMon.print(gps.location.lat(), 8);
+
+          // Längengrad mit 3 Nachkommastellen
+          SerialMon.print(" Längengrad= ");
+          SerialMon.println(gps.location.lng(), 8);
+        }
+      }
     return;
   if (SerialRX.available()) {
     // Allocate the JSON document
