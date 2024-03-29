@@ -38,8 +38,8 @@
 // Set serial for AT commands (to the module)
 // Use Hardware Serial on Mega, Leonardo, Micro
 #define SerialAT Serial1
-#define SerialRX Serial3
 #define SerialGPS Serial2
+#define SerialRX Serial3
 
 
 // See all AT commands, if wanted
@@ -147,68 +147,67 @@ void setup() {
   SerialRX.begin(9600);
   SerialGPS.begin(9600);
 
-  DBG("Initializing modem...");
-  bool modem_running = modem.restart();
-  while (!modem_running){
-    // if (!modem.init()) {
-    DBG("Failed to restart modem, delaying 10s and retrying");
-    modem_running = modem.restart();
-    // restart autobaud in case GSM just rebooted
-    // TinyGsmAutoBaud(SerialAT, GSM_AUTOBAUD_MIN, GSM_AUTOBAUD_MAX);
-  }
+ #if TINY_GSM_TEST_GPRS
+    DBG("Initializing modem...");
+    bool modem_running = modem.restart();
+    while (!modem_running){
+      // if (!modem.init()) {
+      DBG("Failed to restart modem, delaying 10s and retrying");
+      modem_running = modem.restart();
+      // restart autobaud in case GSM just rebooted
+      // TinyGsmAutoBaud(SerialAT, GSM_AUTOBAUD_MIN, GSM_AUTOBAUD_MAX);
+    }
 
-//   String name = modem.getModemName();
-//   DBG("Modem Name:", name);
+    String name = modem.getModemName();
+    DBG("Modem Name:", name);
 
-//   String modemInfo = modem.getModemInfo();
-//   DBG("Modem Info:", modemInfo);
+    String modemInfo = modem.getModemInfo();
+    DBG("Modem Info:", modemInfo);
 
-//   #if TINY_GSM_TEST_GPRS
-//     // Unlock your SIM card with a PIN if needed
-//     if (GSM_PIN && modem.getSimStatus() != 3) { modem.simUnlock(GSM_PIN); }
-//   #endif
+  
+      // Unlock your SIM card with a PIN if needed
+      if (GSM_PIN && modem.getSimStatus() != 3) { modem.simUnlock(GSM_PIN); }
 
 
-// // #if TINY_GSM_TEST_GPRS && defined TINY_GSM_MODEM_XBEE
-// //   // The XBee must run the gprsConnect function BEFORE waiting for network!
-// //   modem.gprsConnect(apn, gprsUser, gprsPass);
-// // #endif
-//   // bool network_connected = 
-//   DBG("Waiting for network...");
-//   if (!modem.waitForNetwork(600000L, true)) {
-//     delay(10000);
-//     return;
-//   }
+  // #if TINY_GSM_TEST_GPRS && defined TINY_GSM_MODEM_XBEE
+  //   // The XBee must run the gprsConnect function BEFORE waiting for network!
+  //   modem.gprsConnect(apn, gprsUser, gprsPass);
+  // #endif
+    // bool network_connected = 
+    DBG("Waiting for network...");
+    if (!modem.waitForNetwork(600000L, true)) {
+      delay(10000);
+      return;
+    }
 
-//   if (modem.isNetworkConnected()) { DBG("Network connected"); }
+    if (modem.isNetworkConnected()) { DBG("Network connected"); }
 
-//   #if TINY_GSM_TEST_GPRS
-//     DBG("Connecting to", apn);
-//     if (!modem.gprsConnect(apn, gprsUser, gprsPass)) {
-//       delay(10000);
-//       return;
-//     }
+    DBG("Connecting to", apn);
+    if (!modem.gprsConnect(apn, gprsUser, gprsPass)) {
+      delay(10000);
+      return;
+    }
 
-//     bool res = modem.isGprsConnected();
-//     DBG("GPRS status:", res ? "connected" : "not connected");
+    bool res = modem.isGprsConnected();
+    DBG("GPRS status:", res ? "connected" : "not connected");
 
-//     String ccid = modem.getSimCCID();
-//     DBG("CCID:", ccid);
+    String ccid = modem.getSimCCID();
+    DBG("CCID:", ccid);
 
-//     String imei = modem.getIMEI();
-//     DBG("IMEI:", imei);
+    String imei = modem.getIMEI();
+    DBG("IMEI:", imei);
 
-//     String imsi = modem.getIMSI();
-//     DBG("IMSI:", imsi);
+    String imsi = modem.getIMSI();
+    DBG("IMSI:", imsi);
 
-//     String cop = modem.getOperator();
-//     DBG("Operator:", cop);
+    String cop = modem.getOperator();
+    DBG("Operator:", cop);
 
-//     IPAddress local = modem.localIP();
-//     DBG("Local IP:", local);
+    IPAddress local = modem.localIP();
+    DBG("Local IP:", local);
 
-//     int csq = modem.getSignalQuality();
-//     DBG("Signal quality:", csq);
+    int csq = modem.getSignalQuality();
+    DBG("Signal quality:", csq);
 
     // DBG("Enabling GPS/GNSS/GLONASS and waiting 15s for warm-up");
     // modem.enableGPS();
@@ -220,9 +219,6 @@ void setup() {
   #endif
 }
 
-String createRandData(){
-  return "{\"temp\": \"" + String(random(10, 200)) + " \", \"pressure\": \"" + String(random(5000, 30000)/100) + " \", \"depth\": \"" + String(random(0, 100)/10) + " \", \"env_dist\": \"" + String(random(0, 20)/10) + " \", \"gps\": \"12.39059306, 6.79417558\", \"ts\": \"" + String(millis()/1000) + "\"}";
-}
 
 void post(HttpClient& http, const String& data)
 {
@@ -264,35 +260,17 @@ void post(HttpClient& http, const String& data)
 }
 
 
+String gps_data = ""; 
 
-
-void loop() {
-  // Restart takes quite some time
-  // To skip it, call init() instead of restart()
-  
-      //  String gps_raw = modem.getGPSraw();
-
-      // float lat2      = 0;
-      // float lon2      = 0;
-      // modem.getGPS(&lat2, &lon2);      
+void loop() {    
     
-      while (SerialGPS.available() > 0) {
-        gps.encode(SerialGPS.read());
+  while (SerialGPS.available() > 0) {
+    gps.encode(SerialGPS.read());
 
-        if (gps.location.isUpdated()) {
-           DBG("GPS/GNSS Based Location String:");
-
-
-          // Breitengrad mit 3 Nachkommastellen
-          SerialMon.print("Breitengrad= ");
-          SerialMon.print(gps.location.lat(), 8);
-
-          // Längengrad mit 3 Nachkommastellen
-          SerialMon.print(" Längengrad= ");
-          SerialMon.println(gps.location.lng(), 8);
-        }
-      }
-    return;
+    if (gps.location.isUpdated()) {
+      gps_data = String(gps.location.lng(), 13)+","+ String(gps.location.lat(), 13);
+    }
+  }
   if (SerialRX.available()) {
     // Allocate the JSON document
     // This one must be bigger than the sender's because it must store the strings
@@ -302,10 +280,8 @@ void loop() {
     DeserializationError err = deserializeJson(data, SerialRX);
 
     if (err == DeserializationError::Ok) {
-      String gps_raw = modem.getGPSraw();
-      DBG("GPS/GNSS Based Location String:", gps_raw);
-      data["gps"] = "11.57960005323633, 48.12800085254037";
-      data["gps"] = gps_raw;
+      data["gps"] = gps_data;
+      // data["gps"] = gps_raw;
       // data["ts"] = millis()/1000;
 
       String payload;
@@ -314,12 +290,6 @@ void loop() {
       post(http, payload);
       // client.stop();
 
-      // Serial.print("timestamp = ");
-      // Serial.println(data["temp"].as<float>());
-      // Serial.print("altitude = ");
-      // Serial.println(data["altitude"].as<float>());
-      // Serial.print("pressure = ");
-      // Serial.println(data["pressure"].as<float>());
     } 
     else {
       // Print error to the "debug" serial port
