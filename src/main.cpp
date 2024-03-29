@@ -186,80 +186,29 @@ void post(HttpClient& http, const String& content, int c)
 
 
 
-
-
-// Example 3 - Receive with start- and end-markers
-
-const byte numChars = 32;
-char receivedChars[numChars];
-
-boolean newData = false;
-
-
-
-void recvWithStartEndMarkers() {
-    static boolean recvInProgress = false;
-    static byte ndx = 0;
-    char startMarker = '<';
-    char endMarker = '>';
-    char rc;
-    // Serial.println("waiting for serial input");
-
-    while (SerialRX.available() > 0 && newData == false) {
-        rc = SerialRX.read();
-        Serial.println(rc);
-
-        if (recvInProgress == true) {
-            if (rc != endMarker) {
-                receivedChars[ndx] = rc;
-                ndx++;
-                if (ndx >= numChars) {
-                    ndx = numChars - 1;
-                }
-            }
-            else {
-                receivedChars[ndx] = '\0'; // terminate the string
-                recvInProgress = false;
-                ndx = 0;
-                newData = true;
-            }
-        }
-
-        else if (rc == startMarker) {
-            recvInProgress = true;
-        }
-    }
-}
-
-void showNewData() {
-    if (newData == true) {
-        Serial.print("This just in ... ");
-        Serial.println(receivedChars);
-        newData = false;
-    }
-}
-
 void loop() {
-    // Serial.println(SerialRX.readString());
-    // recvWithStartEndMarkers();
-    // showNewData();
-    if (SerialRX.available()) 
-  {
+
+    if (SerialRX.available()) {
     // Allocate the JSON document
     // This one must be bigger than the sender's because it must store the strings
-    StaticJsonDocument<300> doc;
+    StaticJsonDocument<300> data;
 
     // Read the JSON document from the "link" serial port
-    DeserializationError err = deserializeJson(doc, SerialRX);
+    DeserializationError err = deserializeJson(data, SerialRX);
 
     if (err == DeserializationError::Ok) 
     {
-      // Print the values
-      // (we must use as<T>() to resolve the ambiguity)
+      data["gps"] = "frank";
+      String payload;
+      serializeJson(data, payload);
+      Serial.println(payload);
+
       Serial.print("timestamp = ");
-      Serial.println(doc["temp"].as<float>());
-      Serial.print("value = ");
-      Serial.println(doc["altitude"].as<float>());
+      Serial.println(data["temp"].as<float>());
+      Serial.print("altitude = ");
+      Serial.println(data["altitude"].as<float>());
+      Serial.print("pressure = ");
+      Serial.println(data["pressure"].as<float>());
     } 
     else 
     {
@@ -268,8 +217,8 @@ void loop() {
       Serial.println(err.c_str());
   
       // Flush all bytes in the "link" serial port buffer
-      while (Serial1.available() > 0)
-        Serial1.read();
+      while (SerialRX.available() > 0)
+        SerialRX.read();
     }
   }
     return;
