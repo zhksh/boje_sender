@@ -102,26 +102,14 @@ const int port        = 80;
 #include <TinyGPS++.h>
 
 
-#if TINY_GSM_TEST_GPRS && not defined TINY_GSM_MODEM_HAS_GPRS
-#undef TINY_GSM_TEST_GPRS
-#undef TINY_GSM_TEST_WIFI
-#define TINY_GSM_TEST_GPRS false
-#define TINY_GSM_TEST_WIFI true
-#endif
-#if TINY_GSM_TEST_WIFI && not defined TINY_GSM_MODEM_HAS_WIFI
-#undef TINY_GSM_USE_GPRS
-#undef TINY_GSM_USE_WIFI
-#define TINY_GSM_USE_GPRS true
-#define TINY_GSM_USE_WIFI false
-#endif
 
 #ifdef DUMP_AT_COMMANDS
 #include <StreamDebugger.h>
 StreamDebugger debugger(SerialAT, SerialMon);
 TinyGsm        modem(debugger);
 #else
-TinyGsm        modem(SerialAT);
 #endif
+TinyGsm        modem(SerialAT);
 
 TinyGsmClient client(modem, 0);
 HttpClient    http(client, server, port);
@@ -134,9 +122,7 @@ void setup() {
   SerialMon.begin(115200);
   delay(10);
 
-  // !!!!!!!!!!!
-  // Set your reset, enable, power pins here
-  // !!!!!!!!!!!
+
 
   DBG("Wait...");
   delay(2000);
@@ -165,14 +151,11 @@ void setup() {
     DBG("Modem Info:", modemInfo);
 
   
-      // Unlock your SIM card with a PIN if needed
-      if (GSM_PIN && modem.getSimStatus() != 3) { modem.simUnlock(GSM_PIN); }
+    // Unlock your SIM card with a PIN if needed
+    if (GSM_PIN && modem.getSimStatus() != 3) { modem.simUnlock(GSM_PIN); }
 
 
-  // #if TINY_GSM_TEST_GPRS && defined TINY_GSM_MODEM_XBEE
-  //   // The XBee must run the gprsConnect function BEFORE waiting for network!
-  //   modem.gprsConnect(apn, gprsUser, gprsPass);
-  // #endif
+
     // bool network_connected = 
     DBG("Waiting for network...");
     if (!modem.waitForNetwork(600000L, true)) {
@@ -222,11 +205,10 @@ void setup() {
 
 void post(HttpClient& http, const String& data)
 {
-  SerialMon.println("making POST request");
-  String contentType = "application/json";
   // String postData = createRandData();
-  SerialMon.print("Data: ");
+  SerialMon.print("Sendingddata: ");
   SerialMon.println(data);
+  String contentType = "application/json";
   http.post(resource, contentType, data);
 
   // read the status code and body of the response
@@ -235,28 +217,26 @@ void post(HttpClient& http, const String& data)
   SerialMon.println(status);
   
 
-  SerialMon.println(F("Response Headers:"));
-  while (http.headerAvailable()) {
-    String headerName  = http.readHeaderName();
-    String headerValue = http.readHeaderValue();
-    SerialMon.println("    " + headerName + " : " + headerValue);
-  }
+  // SerialMon.println(F("Response Headers:"));
+  // while (http.headerAvailable()) {
+  //   String headerName  = http.readHeaderName();
+  //   String headerValue = http.readHeaderValue();
+  //   SerialMon.println("    " + headerName + " : " + headerValue);
+  // }
 
-  int length = http.contentLength();
-  if (length >= 0) {
-    SerialMon.print(F("Content length is: "));
-    SerialMon.println(length);
-  }
-  if (http.isResponseChunked()) {
-    SerialMon.println(F("The response is chunked"));
-  }
+  // int length = http.contentLength();
+  // if (length >= 0) {
+  //   SerialMon.print(F("Content length is: "));
+  //   SerialMon.println(length);
+  // }
+  // if (http.isResponseChunked()) {
+  //   SerialMon.println(F("The response is chunked"));
+  // }
 
   String body = http.responseBody();
   SerialMon.println(F("Response:"));
   SerialMon.println(body);
 
-  SerialMon.print(F("Body length is: "));
-  SerialMon.println(body.length());
 }
 
 
@@ -301,117 +281,7 @@ void loop() {
         SerialRX.read();
     }
   }
-  // int c = 0;
-  // while (true && c < 200){
-  //   DBG("reading from serial");
-  //   while (SerialRX.available() > 0) {
-  //     String data = SerialRX.readString();
-  //     DBG(data);
-  //   post(http, "hi", c++);
-  //   client.stop();
-  // }
 
-
-
-
-// #if TINY_GSM_TEST_GSM_LOCATION && defined TINY_GSM_MODEM_HAS_GSM_LOCATION
-//   float lat      = 0;
-//   float lon      = 0;
-//   float accuracy = 0;
-//   int   year     = 0;
-//   int   month    = 0;
-//   int   day      = 0;
-//   int   hour     = 0;
-//   int   min      = 0;
-//   int   sec      = 0;
-//   for (int8_t i = 15; i; i--) {
-//     DBG("Requesting current GSM location");
-//     if (modem.getGsmLocation(&lat, &lon, &accuracy, &year, &month, &day, &hour,
-//                              &min, &sec)) {
-//       DBG("Latitude:", String(lat, 8), "\tLongitude:", String(lon, 8));
-//       DBG("Accuracy:", accuracy);
-//       DBG("Year:", year, "\tMonth:", month, "\tDay:", day);
-//       DBG("Hour:", hour, "\tMinute:", min, "\tSecond:", sec);
-//       break;
-//     } else {
-//       DBG("Couldn't get GSM location, retrying in 15s.");
-//       delay(15000L);
-//     }
-//   }
-//   DBG("Retrieving GSM location again as a string");
-//   String location = modem.getGsmLocation();
-//   DBG("GSM Based Location String:", location);
-// #endif
-
-// #if TINY_GSM_TEST_GPS && defined TINY_GSM_MODEM_HAS_GPS
-//   DBG("Enabling GPS/GNSS/GLONASS and waiting 15s for warm-up");
-//   modem.enableGPS();
-//   delay(15000L);
-//   float lat2      = 0;
-//   float lon2      = 0;
-//   float speed2    = 0;
-//   float alt2      = 0;
-//   int   vsat2     = 0;
-//   int   usat2     = 0;
-//   float accuracy2 = 0;
-//   int   year2     = 0;
-//   int   month2    = 0;
-//   int   day2      = 0;
-//   int   hour2     = 0;
-//   int   min2      = 0;
-//   int   sec2      = 0;
-//   for (int8_t i = 15; i; i--) {
-//     DBG("Requesting current GPS/GNSS/GLONASS location");
-//     if (modem.getGPS(&lat2, &lon2, &speed2, &alt2, &vsat2, &usat2, &accuracy2,
-//                      &year2, &month2, &day2, &hour2, &min2, &sec2)) {
-//       DBG("Latitude:", String(lat2, 8), "\tLongitude:", String(lon2, 8));
-//       DBG("Speed:", speed2, "\tAltitude:", alt2);
-//       DBG("Visible Satellites:", vsat2, "\tUsed Satellites:", usat2);
-//       DBG("Accuracy:", accuracy2);
-//       DBG("Year:", year2, "\tMonth:", month2, "\tDay:", day2);
-//       DBG("Hour:", hour2, "\tMinute:", min2, "\tSecond:", sec2);
-//       break;
-//     } else {
-//       DBG("Couldn't get GPS/GNSS/GLONASS location, retrying in 15s.");
-//       delay(15000L);
-//     }
-//   }
-//   DBG("Retrieving GPS/GNSS/GLONASS location again as a string");
-//   String gps_raw = modem.getGPSraw();
-//   DBG("GPS/GNSS Based Location String:", gps_raw);
-//   DBG("Disabling GPS");
-//   modem.disableGPS();
-// #endif
-
-
-
-// #if TINY_GSM_POWERDOWN
-
-// #if TINY_GSM_TEST_GPRS
-//   modem.gprsDisconnect();
-//   delay(5000L);
-//   if (!modem.isGprsConnected()) {
-//     DBG("GPRS disconnected");
-//   } else {
-//     DBG("GPRS disconnect: Failed.");
-//   }
-// #endif
-
-// #if TINY_GSM_TEST_WIFI
-//   modem.networkDisconnect();
-//   DBG("WiFi disconnected");
-// #endif
-
-//   // Try to power-off (modem may decide to restart automatically)
-//   // To turn off modem completely, please use Reset/Enable pins
-//   modem.poweroff();
-//   DBG("Poweroff.");
-// #endif
-
-//   DBG("End of tests.");
-
-  // Do nothing forevermore
-  // while (true) { modem.maintain(); }
 
   
 }
